@@ -15,6 +15,9 @@
 # Python implementation
 # https://github.com/thomdixon/pysha2/blob/master/sha2/sha512.py
 
+# number of current round
+i = 0
+
 
 # SHA-512 logical functions
 
@@ -54,15 +57,19 @@ def f4(x):
 
 
 def add2(a, b):
-    return (a + b) % 64
+    return (a + b) % 18446744073709551616  # 2^64
 
 
 def add3(a, b, c):
-    return (add2(a, b) + c) % 64
+    return (add2(a, b) + c) % 18446744073709551616  # 2^64
 
 
 def add4(a, b, c, d):
-    return (add3(a, b, c) + d) % 64
+    return (add3(a, b, c) + d) % 18446744073709551616  # 2^64
+
+
+def add5(a, b, c, d, e):
+    return (add4(a, b, c, d) + e) % 18446744073709551616  # 2^64
 
 
 # Eighty constant 64-bit words
@@ -92,8 +99,8 @@ K = (0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f, 0xe9b5dba58189d
      0x28db77f523047d84, 0x32caab7b40c72493, 0x3c9ebe0a15c9bebc, 0x431d67c49c100d4c,
      0x4cc5d4becb3e42b6, 0x597f299cfc657e2a, 0x5fcb6fab3ad6faec, 0x6c44198c4a475817)
 
-H = (0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
-     0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179)
+H = [0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
+      0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179]
 
 
 def getw(string):
@@ -118,13 +125,53 @@ def getw(string):
         i = i - 1
     W[0] = value
 
-    for t in range(16, 79):
-        W[t] = add4(f4(W[t - 2]), W[t-7], f3(W[t-15]), W[t-16])
+    for t in range(16, 80):
+        W[t] = add4(f4(W[t - 2]), W[t - 7], f3(W[t - 15]), W[t - 16])
     return W
 
 
+def one_round(string):
+    a = H[0]
+    b = H[1]
+    c = H[2]
+    d = H[3]
+    e = H[4]
+    f = H[5]
+    g = H[6]
+    h = H[7]
+
+    w = getw(string)
+
+    for t in range(0, 80):
+        t1 = add5(h, f2(e), ch(e, f, g), K[t], w[t])
+        t2 = add2(f1(a), maj(a, b, c))
+        h = g
+        g = f
+        f = e
+        e = add2(d, t1)
+        d = c
+        c = b
+        b = a
+        a = add2(t1, t2)
+
+    H[0] = a+H[0]
+    H[1] = b+H[1]
+    H[2] = c+H[2]
+    H[3] = d+H[3]
+    H[4] = e+H[4]
+    H[5] = f+H[5]
+    H[6] = g+H[6]
+    H[7] = h+H[7]
+
+
+def hash(string):
+    
 if __name__ == '__main__':
     # 01100001 01100010 01100011
     #    a         b       c
     a = "abc"
-    print(getw(a))
+    one_round(a)
+    print(hex(H[0]))
+
+    for t in range(0, 8):
+        print(hex(H[t]))
