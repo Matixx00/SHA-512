@@ -53,6 +53,18 @@ def f4(x):
     return rot(x, 19) ^ rot(x, 61) ^ (x >> 6)
 
 
+def add2(a, b):
+    return (a + b) % 64
+
+
+def add3(a, b, c):
+    return (add2(a, b) + c) % 64
+
+
+def add4(a, b, c, d):
+    return (add3(a, b, c) + d) % 64
+
+
 # Eighty constant 64-bit words
 # Fun fact:
 # These words represent the first 64 bits of the fractional parts of
@@ -80,17 +92,39 @@ K = (0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f, 0xe9b5dba58189d
      0x28db77f523047d84, 0x32caab7b40c72493, 0x3c9ebe0a15c9bebc, 0x431d67c49c100d4c,
      0x4cc5d4becb3e42b6, 0x597f299cfc657e2a, 0x5fcb6fab3ad6faec, 0x6c44198c4a475817)
 
+H = (0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
+     0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179)
 
-def string_to_bin(string):
+
+def getw(string):
     binary = bytes(0)
-    print(int.from_bytes(binary, byteorder='big'))
+    W = []
+    for i in range(80):
+        W.append(0)
     for char in string:
         binary = binary + ord(char).to_bytes(length=1, byteorder='big')
-    return binary
+    value = int.from_bytes(binary, byteorder='big')
+    value = value << 4
+    # in binary 1000 - we need that 1(from documentation)
+    value = value + 8
+    # 1024 - sum, 8 * each char in string, 4 - we added 4 bits above
+    value = value << (1024 - 8 * len(string) - 4)
+    # length of string at the end
+    value = value + 8 * len(string)
+    i = 15
+    while i > 0:
+        W[i] = int(bin(value)[-64:], 2)
+        value = value >> 64
+        i = i - 1
+    W[0] = value
+
+    for t in range(16, 79):
+        W[t] = add4(f4(W[t - 2]), W[t-7], f3(W[t-15]), W[t-16])
+    return W
 
 
 if __name__ == '__main__':
     # 01100001 01100010 01100011
     #    a         b       c
     a = "abc"
-    print(int.from_bytes(string_to_bin(a), byteorder='big'))
+    print(getw(a))
