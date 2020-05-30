@@ -80,5 +80,17 @@ K = (0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f, 0xe9b5dba58189d
      0x28db77f523047d84, 0x32caab7b40c72493, 0x3c9ebe0a15c9bebc, 0x431d67c49c100d4c,
      0x4cc5d4becb3e42b6, 0x597f299cfc657e2a, 0x5fcb6fab3ad6faec, 0x6c44198c4a475817)
 
+
+def string_to_bin(string):
+    binary = bytes(0)
+    print(int.from_bytes(binary, byteorder='big'))
+    for char in string:
+        binary = binary + ord(char).to_bytes(length=1, byteorder='big')
+    return binary
+
+
 if __name__ == '__main__':
-    print("Hello world")
+    # 01100001 01100010 01100011
+    #    a         b       c
+    a = "abc"
+    print(int.from_bytes(string_to_bin(a), byteorder='big'))
