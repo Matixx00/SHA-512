@@ -18,70 +18,84 @@
 import math
 
 
+# Methods for adding with modulo
+# Python does not support function overloading, so we had to make different def names
+
+def add2(a, b):
+    return (a + b) % 2 ** 64
+
+
+def add3(a, b, c):
+    return (add2(a, b) + c) % 2 ** 64
+
+
+def add4(a, b, c, d):
+    return (add3(a, b, c) + d) % 2 ** 64
+
+
+def add5(a, b, c, d, e):
+    return (add4(a, b, c, d) + e) % 2 ** 64
+
+
+# SHA-512 logical functions
+
+def rot(x, n):
+    """Cyclic rotation.
+
+    :param x: 64-bit word
+    :param n: Number of bits
+    """
+    return (x >> n) | (x << (64 - n))
+
+
+def ch(x, y, z):
+    """Choice function."""
+    return (x & y) ^ (~x & z)
+
+
+def maj(x, y, z):
+    """Majority function."""
+    return (x & y) ^ (x & z) ^ (y & z)
+
+
+def f1(x):
+    return rot(x, 28) ^ rot(x, 34) ^ rot(x, 39)
+
+
+def f2(x):
+    return rot(x, 14) ^ rot(x, 18) ^ rot(x, 41)
+
+
+def f3(x):
+    return rot(x, 1) ^ rot(x, 8) ^ (x >> 7)
+
+
+def f4(x):
+    return rot(x, 19) ^ rot(x, 61) ^ (x >> 6)
+
+
 class SHA512(object):
     """
     Maybe its not the fastest implementation of SHA512 hash algorithm but it works.
-    We were trying to make it without using libraries like Ctypes - just clear python
+    We were trying to make it without using libraries like Ctypes - just pure python
     (that 'import math' doesnt look good :( ).
     """
-    # message to hash
+
+    # Message to hash
     string = ""
 
     def __init__(self, string):
         self.string = string
-        self.hash()
+        self.out = self.hash()
 
-    # number of rounds
+    def __str__(self):
+        return self.out
+
+    # Number of rounds
     N = 0
 
-    # preprocessed message before padded it
+    # Preprocessed message before padded it
     value = 0
-
-    # SHA-512 logical functions
-
-    def rot(self, x, n):
-        """Cyclic rotation.
-
-        :param x: 64-bit word
-        :param n: Number of bits
-        """
-        return (x >> n) | (x << (64 - n))
-
-    def ch(self, x, y, z):
-        """Choice function."""
-        return (x & y) ^ (~x & z)
-
-    def maj(self, x, y, z):
-        """Majority function."""
-        return (x & y) ^ (x & z) ^ (y & z)
-
-    def f1(self, x):
-        return self.rot(x, 28) ^ self.rot(x, 34) ^ self.rot(x, 39)
-
-    def f2(self, x):
-        return self.rot(x, 14) ^ self.rot(x, 18) ^ self.rot(x, 41)
-
-    def f3(self, x):
-        return self.rot(x, 1) ^ self.rot(x, 8) ^ (x >> 7)
-
-    def f4(self, x):
-        return self.rot(x, 19) ^ self.rot(x, 61) ^ (x >> 6)
-
-    """
-    methods for adding with modulo.
-    Python does not support function overloading, so we had to make different def names
-    """
-    def add2(self, a, b):
-        return (a + b) % 18446744073709551616  # 2^64
-
-    def add3(self, a, b, c):
-        return (self.add2(a, b) + c) % 18446744073709551616  # 2^64
-
-    def add4(self, a, b, c, d):
-        return (self.add3(a, b, c) + d) % 18446744073709551616  # 2^64
-
-    def add5(self, a, b, c, d, e):
-        return (self.add4(a, b, c, d) + e) % 18446744073709551616  # 2^64
 
     # Eighty constant 64-bit words
     # Fun fact:
@@ -113,7 +127,6 @@ class SHA512(object):
     H = [0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
          0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179]
 
-
     def count_value(self):
         """
         Preprocess before hash computation as it is in documentation
@@ -124,39 +137,48 @@ class SHA512(object):
 
         for char in self.string:
             binary = binary + ord(char).to_bytes(length=1, byteorder='big')
+
         value = int.from_bytes(binary, byteorder='big')
-        # shift before we add 1000 to make it right
+
+        # Shift before we add 1000 to make it right
         value = value << 4
-        # in binary 1000 - we need that 1(from documentation)
+
+        # In binary 1000 - we need that 1 (from documentation)
         value = value + 8
+
         # 1024 - sum, 8 * each char in string, 4 - we added 4 bits above
         value = value << (1024 * self.N - 8 * len(self.string) - 4)
-        # length of string at the end
+
+        # Length of string at the end
         value = value + 8 * len(self.string)
+
         self.value = value
 
-    def getw(self, N):
+    def get_w(self, N):
         """
         :param N: Number of round
         :return: Array of padded message (see documentation)
         """
-        # shifting value as it is necessary for current round N
+
+        # Shifting value as it is necessary for current round N
         value = self.value >> 1024 * (self.N - N)
-        W = []
-        # creating empty array
-        for i in range(80):
-            W.append(0)
-        i = 15  # for loop
-        # make first 16 values
+
+        W = [0] * 80
+
+        # Make first 16 values
+        i = 15
         while i > 0:
             W[i] = int(bin(value)[-64:], 2)
-            value = value >> 64  # shift to stick out bits for next iteration
+            value = value >> 64  # Shift to stick out bits for next iteration
             i = i - 1
-        # assign here first part to avoid situation when value starts by 0
+
+        # Assign here first part to avoid situation when value starts by 0
         W[0] = value
-        # make values 16-80 as it is in documentation
+
+        # Make values 16-80 as it is in documentation
         for t in range(16, 80):
-            W[t] = self.add4(self.f4(W[t - 2]), W[t - 7], self.f3(W[t - 15]), W[t - 16])
+            W[t] = add4(f4(W[t - 2]), W[t - 7], f3(W[t - 15]), W[t - 16])
+
         return W
 
     def one_round(self, w):
@@ -165,6 +187,7 @@ class SHA512(object):
         :param w: array of padded message
         :return: assigning hashed values to H array
         """
+
         a = self.H[0]
         b = self.H[1]
         c = self.H[2]
@@ -175,36 +198,40 @@ class SHA512(object):
         h = self.H[7]
 
         for t in range(0, 80):
-            t1 = self.add5(h, self.f2(e), self.ch(e, f, g), self.K[t], w[t])
-            t2 = self.add2(self.f1(a), self.maj(a, b, c))
+            t1 = add5(h, f2(e), ch(e, f, g), self.K[t], w[t])
+            t2 = add2(f1(a), maj(a, b, c))
             h = g
             g = f
             f = e
-            e = self.add2(d, t1)
+            e = add2(d, t1)
             d = c
             c = b
             b = a
-            a = self.add2(t1, t2)
+            a = add2(t1, t2)
 
-        self.H[0] = self.add2(a, self.H[0])
-        self.H[1] = self.add2(b, self.H[1])
-        self.H[2] = self.add2(c, self.H[2])
-        self.H[3] = self.add2(d, self.H[3])
-        self.H[4] = self.add2(e, self.H[4])
-        self.H[5] = self.add2(f, self.H[5])
-        self.H[6] = self.add2(g, self.H[6])
-        self.H[7] = self.add2(h, self.H[7])
+        self.H[0] = add2(a, self.H[0])
+        self.H[1] = add2(b, self.H[1])
+        self.H[2] = add2(c, self.H[2])
+        self.H[3] = add2(d, self.H[3])
+        self.H[4] = add2(e, self.H[4])
+        self.H[5] = add2(f, self.H[5])
+        self.H[6] = add2(g, self.H[6])
+        self.H[7] = add2(h, self.H[7])
 
     def hash(self):
-        # count number of needed blocks.
+        # Counts number of needed blocks.
         # 111 - max number of chars in one round.
         # 128 - number of chars which we can put in 1024 bits block.
         # +1 - to make number of rounds > 0
         self.N = int(math.ceil((len(self.string) - 111) / 128)) + 1
         self.count_value()
-        for N in range(1, self.N+1):
-            self.one_round(self.getw(N))
+
+        for N in range(1, self.N + 1):
+            self.one_round(self.get_w(N))
+
         out = ""
+
         for i in self.H:
-            out = out + hex(i)[2:] + " "
-        print(out)
+            out = out + hex(i)[2:]
+
+        return out
