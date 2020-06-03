@@ -81,13 +81,11 @@ class SHA512(object):
     (that 'import math' doesnt look good :( ).
     """
 
-    # Message to hash
-    string = ""
-
     def __init__(self, string):
         self.H = [0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
                   0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179]
 
+        # Message to hash
         self.string = string
         self.out = self.hash()
 
@@ -233,9 +231,16 @@ class SHA512(object):
         for N in range(1, self.N + 1):
             self.one_round(self.get_w(N))
 
-        out = ""
+        out = ''
 
         for i in self.H:
-            out = out + hex(i)[2:]
+            # Checks if any value of H has less than 16 digits
+            # If yes, add some zeros to the beginning to make it 64-bits
+            n = 1
+            while i // 2**(64-4*n) == 0:
+                out += '0'
+                n += 1
+
+            out += hex(i)[2:]
 
         return out
